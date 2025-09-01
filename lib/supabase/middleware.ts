@@ -39,8 +39,14 @@ export async function updateSession(request: NextRequest) {
 
     console.log("[v0] User session check:", { hasUser: !!user })
 
+    if (!user && request.nextUrl.pathname === "/") {
+      const url = request.nextUrl.clone()
+      url.pathname = "/auth/login"
+      return NextResponse.redirect(url)
+    }
+
     // If user is not authenticated and trying to access protected routes, redirect to login
-    if (!user && !request.nextUrl.pathname.startsWith("/auth") && request.nextUrl.pathname !== "/") {
+    if (!user && !request.nextUrl.pathname.startsWith("/auth")) {
       const url = request.nextUrl.clone()
       url.pathname = "/auth/login"
       return NextResponse.redirect(url)

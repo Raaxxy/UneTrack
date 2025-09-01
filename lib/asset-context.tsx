@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, type ReactNode, useState, useEffect } from "react"
+import { createContext, useContext, type ReactNode, useState, useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import type {
   AssetCategory,
@@ -41,7 +41,10 @@ const AssetContext = createContext<AssetContextType | undefined>(undefined)
 export function AssetProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
+  const isInitializedRef = useRef(false)
+  const loadingDataRef = useRef(false)
 
   const [categories, setCategories] = useState<AssetCategory[]>([])
   const [masterAssets, setMasterAssets] = useState<MasterAsset[]>([])
@@ -53,37 +56,78 @@ export function AssetProvider({ children }: { children: ReactNode }) {
   const [maintenanceSchedules, setMaintenanceSchedules] = useState<MaintenanceSchedule[]>([])
 
   useEffect(() => {
+    if (isInitializedRef.current) return
+    isInitializedRef.current = true
+
     const getInitialSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        loadData()
-      } else {
+      try {
+        console.log("[v0] Getting initial session...")
+
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession()
+
+        console.log("[v0] Session response:", { session: !!session, error })
+
+        if (error) {
+          console.error("[v0] Session error:", error)
+        }
+
+        setUser(session?.user ?? null)
+
+        if (session?.user) {
+          console.log("[v0] User authenticated, loading data...")
+          await loadData()
+        } else {
+          console.log("[v0] No user session, setting loading to false")
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error("[v0] Error getting initial session:", error)
         setLoading(false)
       }
     }
 
     getInitialSession()
 
+    let authTimeout: NodeJS.Timeout
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        loadData()
-      } else {
-        setCategories([])
-        setAssets([])
-        setLoading(false)
-      }
+      console.log("[v0] Auth state change:", { event, hasSession: !!session })
+
+      if (authTimeout) clearTimeout(authTimeout)
+
+      authTimeout = setTimeout(async () => {
+        const newUser = session?.user ?? null
+
+        if (JSON.stringify(user) !== JSON.stringify(newUser)) {
+          setUser(newUser)
+
+          if (newUser) {
+            console.log("[v0] User authenticated via state change, loading data...")
+            await loadData()
+          } else {
+            console.log("[v0] No user in state change, clearing data...")
+            setCategories([])
+            setAssets([])
+            setLoading(false)
+          }
+        }
+      }, 100)
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      subscription.unsubscribe()
+      if (authTimeout) clearTimeout(authTimeout)
+    }
   }, [])
 
   const loadData = async () => {
+    if (loadingDataRef.current) return
+    loadingDataRef.current = true
+
     try {
       setLoading(true)
 
@@ -112,15 +156,20 @@ export function AssetProvider({ children }: { children: ReactNode }) {
       console.error("Error loading data:", error)
     } finally {
       setLoading(false)
+      loadingDataRef.current = false
     }
   }
 
   const addAsset = async (asset: Asset) => {
     if (!user) {
+      console.log("[v0] No user authenticated for adding asset")
       throw new Error("User must be authenticated to add assets")
     }
 
     try {
+      console.log("[v0] Adding asset:", asset)
+      console.log("[v0] User:", user)
+
       const { data, error } = await supabase
         .from("assets")
         .insert([
@@ -149,20 +198,20 @@ export function AssetProvider({ children }: { children: ReactNode }) {
             display_orientation: asset.displayOrientation,
             operating_hours: asset.operatingHours,
             status: asset.status || "active",
-            user_id: user.id,
           },
         ])
         .select()
         .single()
 
       if (error) {
-        console.error("Error adding asset:", error)
+        console.error("[v0] Error adding asset:", error)
         throw error
       }
 
+      console.log("[v0] Asset added successfully:", data)
       setAssets((prev) => [data, ...prev])
     } catch (error) {
-      console.error("Error adding asset:", error)
+      console.error("[v0] Error adding asset:", error)
       throw error
     }
   }
@@ -219,30 +268,51 @@ export function AssetProvider({ children }: { children: ReactNode }) {
 
   const addCategory = async (category: AssetCategory) => {
     if (!user) {
+      console.log("[v0] No user authenticated for adding category")
       throw new Error("User must be authenticated to add categories")
     }
 
     try {
-      const { data, error } = await supabase
-        .from("asset_categories")
-        .insert([
-          {
-            name: category.name,
-            description: category.description,
-            user_id: user.id,
-          },
-        ])
-        .select()
-        .single()
+      console.log("[v0] Starting addCategory function")
+      console.log("[v0] User authenticated:", !!user)
+      console.log("[v0] User ID:", user?.id)
+      console.log("[v0] Adding category:", category)
+      console.log("[v0] Supabase client:", !!supabase)
+
+      const insertData = {
+        name: category.name,
+        description: category.description,
+      }
+      console.log("[v0] Insert data:", insertData)
+
+      const { data, error } = await supabase.from("asset_categories").insert([insertData]).select().single()
+
+      console.log("[v0] Supabase response - data:", data)
+      console.log("[v0] Supabase response - error:", error)
 
       if (error) {
-        console.error("Error adding category:", error)
+        console.error("[v0] Database error details:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        })
         throw error
       }
 
-      setCategories((prev) => [...prev, data])
+      console.log("[v0] Category added successfully to database:", data)
+      setCategories((prev) => {
+        const newCategories = [...prev, data]
+        console.log("[v0] Updated categories state:", newCategories)
+        return newCategories
+      })
+      console.log("[v0] Category addition completed successfully")
     } catch (error) {
-      console.error("Error adding category:", error)
+      console.error("[v0] Comprehensive error in addCategory:", {
+        error,
+        message: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+      })
       throw error
     }
   }
@@ -266,6 +336,8 @@ export function AssetProvider({ children }: { children: ReactNode }) {
   const deleteMaintenanceSchedule = (id: string) => {
     setMaintenanceSchedules(maintenanceSchedules.filter((s) => s.id !== id))
   }
+
+  console.log("[v0] User session check:", { hasUser: !!user, userId: user?.id, userEmail: user?.email })
 
   return (
     <AssetContext.Provider

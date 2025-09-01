@@ -246,7 +246,7 @@ const UnifiedAssetModal = ({ isOpen, onClose, onSave, categories, asset }: Unifi
                     <FormItem>
                       <FormLabel>Latitude</FormLabel>
                       <FormControl>
-                        <Input {...field} type="number" step="any" placeholder="e.g., 28.6139" />
+                        <Input {...field} type="number" step="0.000001" placeholder="e.g., 28.6139" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -260,7 +260,7 @@ const UnifiedAssetModal = ({ isOpen, onClose, onSave, categories, asset }: Unifi
                     <FormItem>
                       <FormLabel>Longitude</FormLabel>
                       <FormControl>
-                        <Input {...field} type="number" step="any" placeholder="e.g., 77.2090" />
+                        <Input {...field} type="number" step="0.000001" placeholder="e.g., 77.2090" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

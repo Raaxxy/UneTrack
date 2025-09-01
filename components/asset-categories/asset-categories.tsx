@@ -20,6 +20,7 @@ import type { AssetCategory, Asset } from "@/lib/types"
 import CategoryModal from "./category-modal"
 import DeleteConfirmationModal from "../shared/delete-confirmation-modal"
 import { toast } from "@/components/ui/use-toast"
+import { useAssetContext } from "@/lib/asset-context"
 
 interface AssetCategoriesProps {
   categories: AssetCategory[]
@@ -33,6 +34,7 @@ export default function AssetCategories({ categories, setCategories, assets }: A
   const [currentCategory, setCurrentCategory] = useState<AssetCategory | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const { addCategory } = useAssetContext()
 
   const filteredCategories = useMemo(() => {
     if (!searchQuery) return categories
@@ -120,7 +122,9 @@ export default function AssetCategories({ categories, setCategories, assets }: A
     setIsDeleteModalOpen(false)
   }
 
-  const saveCategory = (category: AssetCategory) => {
+  const saveCategory = async (category: AssetCategory) => {
+    console.log("[v0] saveCategory called with:", category)
+
     if (currentCategory) {
       setCategories(categories.map((cat) => (cat.id === category.id ? category : cat)))
       toast({
@@ -128,12 +132,22 @@ export default function AssetCategories({ categories, setCategories, assets }: A
         description: "The category has been successfully updated.",
       })
     } else {
-      const newId = (Math.max(...categories.map((cat) => Number.parseInt(cat.id)), 0) + 1).toString()
-      setCategories([...categories, { ...category, id: newId }])
-      toast({
-        title: "Category Created",
-        description: "The new category has been successfully created.",
-      })
+      console.log("[v0] Creating new category, calling addCategory...")
+      try {
+        await addCategory(category)
+        console.log("[v0] addCategory completed successfully")
+        toast({
+          title: "Category Created",
+          description: "The new category has been successfully created.",
+        })
+      } catch (error) {
+        console.error("[v0] Error creating category:", error)
+        toast({
+          title: "Error Creating Category",
+          description: "Failed to create the category. Please try again.",
+          variant: "destructive",
+        })
+      }
     }
     setIsModalOpen(false)
   }

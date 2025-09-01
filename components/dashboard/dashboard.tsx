@@ -1,5 +1,6 @@
 "use client"
 import { useState, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import {
   Sidebar,
   SidebarContent,
@@ -13,27 +14,22 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  Area,
-  AreaChart,
-} from "recharts"
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import AssetManagement from "@/components/asset-management"
 import ReportsDashboard from "@/components/reports/reports-dashboard"
 import AssetMap from "@/components/maps/asset-map"
 import Settings from "@/components/settings/settings"
 import { useAssetContext } from "@/lib/asset-context"
+import { createClient } from "@/lib/supabase/client"
 import {
   LayoutDashboard,
   Package,
@@ -44,7 +40,24 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
+  LogOut,
 } from "lucide-react"
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  BarChart,
+  Bar,
+  AreaChart,
+  Area,
+  LineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+} from "recharts"
 
 const COLORS = [
   "#FF6B6B", // Coral Red
@@ -66,7 +79,29 @@ const navigationItems = [
 
 export default function Dashboard() {
   const [activeView, setActiveView] = useState("dashboard")
-  const { assets, categories, locations, sections, subSections, zones } = useAssetContext()
+  const { assets, categories, locations, sections, subSections, zones, user } = useAssetContext()
+  const supabase = createClient()
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+      router.push("/auth/login")
+      router.refresh()
+    } catch (error) {
+      console.error("Error logging out:", error)
+    }
+  }
+
+  const getUserInitials = () => {
+    if (!user?.email) return "U"
+    const email = user.email
+    const parts = email.split("@")[0].split(".")
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase()
+    }
+    return email[0].toUpperCase()
+  }
 
   const analytics = useMemo(() => {
     const totalAssets = assets.length
@@ -111,18 +146,15 @@ export default function Dashboard() {
       [] as Array<{ name: string; value: number; percentage: number }>,
     )
 
-    // Calculate percentages for location distribution
     locationDistribution.forEach((item) => {
       item.percentage = totalAssets > 0 ? Math.round((item.value / totalAssets) * 100) : 0
     })
 
-    // Maintenance timeline (last 6 months)
     const maintenanceTimeline = Array.from({ length: 6 }, (_, i) => {
       const date = new Date()
       date.setMonth(date.getMonth() - (5 - i))
       const monthName = date.toLocaleDateString("en-US", { month: "short" })
 
-      // Simulate maintenance data for demo
       const maintenanceCount = Math.floor(Math.random() * 10) + 5
       const cost = Math.floor(Math.random() * 5000) + 2000
 
@@ -319,7 +351,6 @@ export default function Dashboard() {
                             </PieChart>
                           </ResponsiveContainer>
 
-                          {/* Custom Legend */}
                           <div className="absolute top-4 right-4 space-y-2">
                             {analytics.categoryDistribution.map((entry, index) => (
                               <div key={entry.name} className="flex items-center gap-2 text-sm">
@@ -333,7 +364,6 @@ export default function Dashboard() {
                             ))}
                           </div>
 
-                          {/* Center Label */}
                           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div className="text-center">
                               <div className="text-3xl font-bold text-foreground">{analytics.totalAssets}</div>
@@ -562,7 +592,34 @@ export default function Dashboard() {
           <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex h-14 items-center px-6">
               <SidebarTrigger className="mr-4" />
-              <div className="ml-auto flex items-center gap-3">{/* Additional header content can be added here */}</div>
+              <div className="ml-auto flex items-center gap-3">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                          {getUserInitials()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">Account</p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {user?.email || "user@example.com"}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </header>
           <main className="flex-1 p-6">{renderContent()}</main>

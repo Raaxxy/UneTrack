@@ -63,9 +63,9 @@ export default function SignUpPage() {
           <div className="flex flex-col items-center gap-2 mb-4">
             <div className="flex items-center gap-2">
               <Monitor className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold">SignageFlow</span>
+              <span className="text-2xl font-bold">UneTrack</span>
             </div>
-            <p className="text-muted-foreground text-sm">Digital Signage SaaS</p>
+            <p className="text-muted-foreground text-sm">Asset Management SaaS</p>
           </div>
 
           <Card className="border-border/50 shadow-lg">

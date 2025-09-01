@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
@@ -40,6 +40,7 @@ import DeleteConfirmationModal from "../shared/delete-confirmation-modal"
 import { toast } from "@/components/ui/use-toast"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { isAfter, isBefore } from "date-fns"
+import { useAssetContext } from "@/lib/asset-context"
 
 interface AssetsInUseProps {
   assets: Asset[]
@@ -75,6 +76,7 @@ export default function AssetsInUse({
   categories = [],
 }: AssetsInUseProps) {
   const router = useRouter()
+  const { addAsset } = useAssetContext()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [currentAsset, setCurrentAsset] = useState<Asset | null>(null)
@@ -165,7 +167,9 @@ export default function AssetsInUse({
     setIsDeleteModalOpen(false)
   }
 
-  const saveAsset = (asset: Asset) => {
+  const saveAsset = async (asset: Asset) => {
+    console.log("[v0] saveAsset called with:", asset)
+
     if (currentAsset) {
       setAssets(assets.map((a) => (a.id === asset.id ? asset : a)))
       toast({
@@ -173,12 +177,22 @@ export default function AssetsInUse({
         description: "The asset has been successfully updated.",
       })
     } else {
-      const newId = (Math.max(...assets.map((a) => Number.parseInt(a.id)), 0) + 1).toString()
-      setAssets([...assets, { ...asset, id: newId }])
-      toast({
-        title: "Asset Created",
-        description: "The new asset has been successfully created.",
-      })
+      console.log("[v0] Creating new asset, calling addAsset...")
+      try {
+        await addAsset(asset)
+        toast({
+          title: "Asset Created",
+          description: "The new asset has been successfully created and saved to database.",
+        })
+      } catch (error) {
+        console.error("[v0] Error adding asset:", error)
+        toast({
+          title: "Error",
+          description: "Failed to create asset. Please try again.",
+          variant: "destructive",
+        })
+        return // Don't close modal if there's an error
+      }
     }
     setIsModalOpen(false)
   }
@@ -390,6 +404,8 @@ export default function AssetsInUse({
     const file = event.target.files?.[0]
     if (!file) return
 
+    event.target.value = ""
+
     const reader = new FileReader()
     reader.onload = (e) => {
       const text = e.target?.result as string
@@ -454,7 +470,6 @@ export default function AssetsInUse({
     }
 
     reader.readAsText(file)
-    event.target.value = "" // Reset file input
   }
 
   const downloadFile = (blob: Blob, filename: string) => {
@@ -625,6 +640,9 @@ export default function AssetsInUse({
     }
   }
 
+  const csvInputRef = useRef<HTMLInputElement>(null)
+  const excelInputRef = useRef<HTMLInputElement>(null)
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -688,12 +706,8 @@ export default function AssetsInUse({
             <DropdownMenuContent>
               <DropdownMenuLabel>Import Assets</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => document.getElementById("csv-import")?.click()}>
-                Import CSV File
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => document.getElementById("excel-import")?.click()}>
-                Import Excel File
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => csvInputRef.current?.click()}>Import CSV File</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => excelInputRef.current?.click()}>Import Excel File</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuLabel>Download Templates</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => handleDownloadTemplate("csv")}>Download CSV Template</DropdownMenuItem>
@@ -703,14 +717,8 @@ export default function AssetsInUse({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <input id="csv-import" type="file" accept=".csv" style={{ display: "none" }} onChange={handleImportData} />
-          <input
-            id="excel-import"
-            type="file"
-            accept=".xlsx,.xls"
-            style={{ display: "none" }}
-            onChange={handleImportData}
-          />
+          <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleImportData} />
+          <input ref={excelInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportData} />
 
           <Button onClick={handleAddAsset} size="sm">
             <PlusCircle className="mr-2 h-4 w-4" />

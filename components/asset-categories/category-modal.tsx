@@ -19,7 +19,7 @@ interface CategoryModalProps {
   category: AssetCategory | null
 }
 
-// <CHANGE> Removed parentId from form schema
+// Removed parentId from form schema
 const formSchema = z.object({
   name: z.string().min(1, "This field is required").max(100, "Text must be under 100 characters"),
   description: z.string().max(500, "Description must be under 500 characters").optional().nullable(),
@@ -50,12 +50,12 @@ export default function CategoryModal({ isOpen, onClose, onSave, categories, cat
   }, [category, form])
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    // <CHANGE> Simplified duplicate check without parentId
-    const isDuplicate = categories.some(
-      (cat) => cat.name === values.name && cat.id !== category?.id,
-    )
+    console.log("[v0] CategoryModal onSubmit called with values:", values)
+
+    const isDuplicate = categories.some((cat) => cat.name === values.name && cat.id !== category?.id)
 
     if (isDuplicate) {
+      console.log("[v0] Duplicate category name found, setting error")
       form.setError("name", {
         type: "manual",
         message: "This name already exists",
@@ -63,11 +63,15 @@ export default function CategoryModal({ isOpen, onClose, onSave, categories, cat
       return
     }
 
-    onSave({
+    console.log("[v0] No duplicate found, calling onSave...")
+    const categoryData = {
       id: category?.id || "0", // Temporary ID, will be replaced in the parent component
       name: values.name,
       description: values.description,
-    })
+    }
+    console.log("[v0] Calling onSave with category data:", categoryData)
+
+    onSave(categoryData)
   }
 
   return (
