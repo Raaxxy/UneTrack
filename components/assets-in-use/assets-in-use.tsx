@@ -231,7 +231,7 @@ export default function AssetsInUse({
       dataToExport.forEach((asset) => {
         const row = [
           `"${asset.name || ""}"`,
-          `"${getCategoryName(asset.categoryId || "")}"`,
+          `"${getCategoryName(asset)}"`,
           `"${asset.assetLocation || ""}"`,
           `"${asset.googleLocation || ""}"`,
           asset.latitude || "",
@@ -292,7 +292,7 @@ export default function AssetsInUse({
       dataToExport.forEach((asset) => {
         const row = [
           `"${asset.name || ""}"`,
-          `"${getCategoryName(asset.categoryId || "")}"`,
+          `"${getCategoryName(asset)}"`,
           `"${asset.assetLocation || ""}"`,
           `"${asset.googleLocation || ""}"`,
           asset.latitude || "",
@@ -488,14 +488,14 @@ export default function AssetsInUse({
     return asset.name || "Unknown"
   }
 
-  const getCategoryName = (id: string) => {
-    const category = categories.find((cat) => cat.id === id)
+  const getCategoryName = (asset: Asset) => {
+    const categoryId = asset.category_id || asset.categoryId || ""
+    const category = categories.find((cat) => cat.id === categoryId)
     return category ? category.name : "Unknown"
   }
 
-  const getLocationName = (id: string) => {
-    const location = locations.find((loc) => loc.id === id)
-    return location ? location.name : "Unknown"
+  const getLocationName = (asset: Asset) => {
+    return asset.asset_location || asset.assetLocation || "Unknown"
   }
 
   const getZoneName = (id: string) => {
@@ -504,26 +504,25 @@ export default function AssetsInUse({
   }
 
   const getCategoryIdForAsset = (asset: Asset) => {
-    return asset.categoryId || ""
+    return asset.category_id || asset.categoryId || ""
   }
 
   const getAssetStatus = (asset: Asset) => {
-    const currentDate = new Date()
-    const warrantyEnd = new Date(asset.warrantyEndDate)
-    const nextMaintenance = asset.nextMaintenanceDate ? new Date(asset.nextMaintenanceDate) : null
-
-    if (nextMaintenance && isBefore(nextMaintenance, currentDate)) {
-      return "Maintenance Overdue"
-    }
-    if (isBefore(warrantyEnd, currentDate)) {
-      return "Warranty Expired"
+    if (asset.warranty_end_date || asset.warrantyEndDate) {
+      const warrantyEndDate = new Date(asset.warranty_end_date || asset.warrantyEndDate)
+      const now = new Date()
+      if (warrantyEndDate < now) {
+        return "Expired"
+      } else if (warrantyEndDate.getTime() - now.getTime() < 90 * 24 * 60 * 60 * 1000) {
+        return "Expiring Soon"
+      }
     }
     return "Active"
   }
 
   const getStatusBadge = (asset: Asset) => {
     const status = getAssetStatus(asset)
-    const variant = status === "Active" ? "default" : status === "Warranty Expired" ? "secondary" : "destructive"
+    const variant = status === "Active" ? "default" : status === "Expired" ? "secondary" : "destructive"
 
     return <Badge variant={variant}>{status}</Badge>
   }
@@ -858,8 +857,8 @@ export default function AssetsInUse({
             {paginatedAssets.length > 0 ? (
               paginatedAssets.map((asset) => {
                 const assetName = getAssetName(asset)
-                const categoryName = getCategoryName(asset.categoryId || "")
-                const locationName = getLocationName(asset.locationId)
+                const categoryName = getCategoryName(asset)
+                const locationName = getLocationName(asset)
 
                 return (
                   <TableRow
@@ -885,7 +884,9 @@ export default function AssetsInUse({
                     </TableCell>
                     <TableCell>{getStatusBadge(asset)}</TableCell>
                     <TableCell className="text-sm">
-                      {asset.operatingHours || <span className="text-muted-foreground">Not set</span>}
+                      {asset.operating_hours || asset.operatingHours || (
+                        <span className="text-muted-foreground">Not set</span>
+                      )}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>

@@ -116,7 +116,9 @@ export default function Dashboard() {
 
     const categoryDistribution = categories
       .map((category) => {
-        const categoryAssets = assets.filter((asset) => asset.categoryId === category.id)
+        const categoryAssets = assets.filter(
+          (asset) => asset.categoryId === category.id || asset.category_id === category.id,
+        )
         return {
           name: category.name,
           value: categoryAssets.length,
@@ -127,9 +129,14 @@ export default function Dashboard() {
 
     const locationDistribution = assets.reduce(
       (acc, asset) => {
-        if (asset.coordinates && asset.coordinates.lat && asset.coordinates.lng) {
+        const hasCoords = (asset.latitude && asset.longitude) || (asset.coordinates?.lat && asset.coordinates?.lng)
+        if (hasCoords) {
           const locationKey =
-            asset.location || `${asset.coordinates.lat.toFixed(2)}, ${asset.coordinates.lng.toFixed(2)}`
+            asset.asset_location ||
+            asset.assetLocation ||
+            asset.google_location ||
+            asset.googleLocation ||
+            `${asset.latitude || asset.coordinates?.lat}, ${asset.longitude || asset.coordinates?.lng}`
           const existing = acc.find((item) => item.name === locationKey)
           if (existing) {
             existing.value += 1
@@ -137,7 +144,7 @@ export default function Dashboard() {
             acc.push({
               name: locationKey,
               value: 1,
-              percentage: 0, // Will be calculated after
+              percentage: 0,
             })
           }
         }
@@ -168,23 +175,29 @@ export default function Dashboard() {
     const currentDate = new Date()
     const warrantyStatus = {
       active: assets.filter((asset) => {
-        if (!asset.warrantyStartDate || !asset.warrantyPeriodMonths) return false
-        const warrantyEnd = new Date(asset.warrantyStartDate)
-        warrantyEnd.setMonth(warrantyEnd.getMonth() + asset.warrantyPeriodMonths)
+        const startDate = asset.warranty_start_date || asset.warrantyStartDate
+        const periodMonths = asset.warranty_period_months || asset.warrantyPeriodMonths
+        if (!startDate || !periodMonths) return false
+        const warrantyEnd = new Date(startDate)
+        warrantyEnd.setMonth(warrantyEnd.getMonth() + Number.parseInt(periodMonths))
         return warrantyEnd > currentDate
       }).length,
       expiringSoon: assets.filter((asset) => {
-        if (!asset.warrantyStartDate || !asset.warrantyPeriodMonths) return false
-        const warrantyEnd = new Date(asset.warrantyStartDate)
-        warrantyEnd.setMonth(warrantyEnd.getMonth() + asset.warrantyPeriodMonths)
+        const startDate = asset.warranty_start_date || asset.warrantyStartDate
+        const periodMonths = asset.warranty_period_months || asset.warrantyPeriodMonths
+        if (!startDate || !periodMonths) return false
+        const warrantyEnd = new Date(startDate)
+        warrantyEnd.setMonth(warrantyEnd.getMonth() + Number.parseInt(periodMonths))
         const threeMonthsFromNow = new Date()
         threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3)
         return warrantyEnd > currentDate && warrantyEnd <= threeMonthsFromNow
       }).length,
       expired: assets.filter((asset) => {
-        if (!asset.warrantyStartDate || !asset.warrantyPeriodMonths) return false
-        const warrantyEnd = new Date(asset.warrantyStartDate)
-        warrantyEnd.setMonth(warrantyEnd.getMonth() + asset.warrantyPeriodMonths)
+        const startDate = asset.warranty_start_date || asset.warrantyStartDate
+        const periodMonths = asset.warranty_period_months || asset.warrantyPeriodMonths
+        if (!startDate || !periodMonths) return false
+        const warrantyEnd = new Date(startDate)
+        warrantyEnd.setMonth(warrantyEnd.getMonth() + Number.parseInt(periodMonths))
         return warrantyEnd <= currentDate
       }).length,
     }
@@ -270,8 +283,10 @@ export default function Dashboard() {
                 </CardTitle>
                 <CardDescription>Geographic distribution of your digital signage assets across India</CardDescription>
               </CardHeader>
-              <CardContent className="p-0">
-                <AssetMap />
+              <CardContent className="p-6">
+                <div className="h-[600px] w-full">
+                  <AssetMap assets={assets} />
+                </div>
               </CardContent>
             </Card>
 

@@ -81,6 +81,7 @@ export function DataManagement() {
     a.href = url
     a.download = fileName
     a.click()
+    URL.revokeObjectURL(url)
 
     setJobs((prev) =>
       prev.map((job) =>

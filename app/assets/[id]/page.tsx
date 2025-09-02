@@ -24,33 +24,8 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
   useEffect(() => {
     const foundAsset = assets.find((a) => a.id === params.id)
     if (foundAsset) {
-      const enhancedAsset = {
-        ...foundAsset,
-        name: foundAsset.name || 'Samsung 55" 4K Digital Display',
-        manufacturer: foundAsset.manufacturer || "Samsung",
-        modelNumber: foundAsset.modelNumber || "QM55R-T",
-        screenSize: foundAsset.screenSize || "55 inch",
-        customScreenSize: foundAsset.customScreenSize || 55,
-        resolution: foundAsset.resolution || "4K (3840x2160)",
-        customResolution: foundAsset.customResolution || "",
-        operatingSystem: foundAsset.operatingSystem || "Tizen",
-        assetLocation: foundAsset.assetLocation || "Mumbai Corporate Office - Main Lobby",
-        googleLocation: foundAsset.googleLocation || "Bandra Kurla Complex, Mumbai, Maharashtra, India",
-        latitude: foundAsset.latitude || 19.0596,
-        longitude: foundAsset.longitude || 72.8295,
-        powerConsumption: foundAsset.powerConsumption || 150,
-        macAddress: foundAsset.macAddress || "AA:BB:CC:DD:EE:01",
-        contentManagementSystem: foundAsset.contentManagementSystem || "Samsung MagicInfo",
-        displayOrientation: foundAsset.displayOrientation || "Landscape",
-        operatingHours: foundAsset.operatingHours || "24/7 hours/day",
-        purchaseDate: foundAsset.purchaseDate || "2023-01-15",
-        installationDate: foundAsset.installationDate || "2023-01-20",
-        warrantyStartDate: foundAsset.warrantyStartDate || "2023-01-15",
-        warrantyPeriodMonths: foundAsset.warrantyPeriodMonths || 36,
-        description: foundAsset.description || "Main lobby display screen",
-        serialNumber: foundAsset.serialNumber || "SAM55-001",
-      }
-      setAsset(enhancedAsset)
+      console.log("[v0] Found asset for details page:", foundAsset)
+      setAsset(foundAsset)
     } else {
       router.push("/")
     }
@@ -67,7 +42,7 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
     )
   }
 
-  const category = categories.find((cat) => cat.id === asset.categoryId)
+  const category = categories.find((cat) => cat.id === asset.categoryId || cat.id === asset.category_id)
 
   const formatDate = (dateValue: string | undefined | null) => {
     if (!dateValue) return "Not specified"
@@ -77,11 +52,15 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
   }
 
   const today = new Date()
-  const warrantyStart = asset.warrantyStartDate ? new Date(asset.warrantyStartDate) : null
+  const warrantyStart =
+    asset.warrantyStartDate || asset.warranty_start_date
+      ? new Date(asset.warrantyStartDate || asset.warranty_start_date)
+      : null
   const warrantyEnd = warrantyStart ? new Date(warrantyStart) : null
 
   if (warrantyEnd && warrantyStart && !isNaN(warrantyStart.getTime())) {
-    warrantyEnd.setMonth(warrantyEnd.getMonth() + asset.warrantyPeriodMonths)
+    const warrantyPeriod = asset.warrantyPeriodMonths || asset.warranty_period_months || 0
+    warrantyEnd.setMonth(warrantyEnd.getMonth() + warrantyPeriod)
   }
 
   const isWarrantyActive = warrantyEnd ? today <= warrantyEnd : false
@@ -89,6 +68,10 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
 
   const handlePrint = () => {
     window.print()
+  }
+
+  const getFieldValue = (camelCase: string, snake_case: string) => {
+    return asset[camelCase] || asset[snake_case] || "Not specified"
   }
 
   return (
@@ -164,7 +147,7 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
                     Serial Number
                   </p>
                   <p className="text-sm font-mono bg-muted/70 px-4 py-3 rounded-xl text-muted-foreground border border-border/50">
-                    {asset.serialNumber}
+                    {getFieldValue("serialNumber", "serial_number")}
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -172,45 +155,55 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
                     <div className="w-1 h-4 bg-blue-400 rounded-full"></div>
                     Manufacturer
                   </p>
-                  <p className="text-sm text-muted-foreground font-semibold">{asset.manufacturer}</p>
+                  <p className="text-sm text-muted-foreground font-semibold">
+                    {getFieldValue("manufacturer", "manufacturer")}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                     <div className="w-1 h-4 bg-blue-400 rounded-full"></div>
                     Model Number
                   </p>
-                  <p className="text-sm text-muted-foreground font-semibold">{asset.modelNumber}</p>
+                  <p className="text-sm text-muted-foreground font-semibold">
+                    {getFieldValue("modelNumber", "model_number")}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                     <div className="w-1 h-4 bg-blue-400 rounded-full"></div>
                     Screen Size
                   </p>
-                  <p className="text-sm text-muted-foreground font-semibold">{asset.screenSize}</p>
+                  <p className="text-sm text-muted-foreground font-semibold">
+                    {getFieldValue("screenSize", "screen_size")}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                     <div className="w-1 h-4 bg-blue-400 rounded-full"></div>
                     Resolution
                   </p>
-                  <p className="text-sm text-muted-foreground font-semibold">{asset.resolution}</p>
+                  <p className="text-sm text-muted-foreground font-semibold">
+                    {getFieldValue("resolution", "resolution")}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                     <div className="w-1 h-4 bg-blue-400 rounded-full"></div>
                     Operating System
                   </p>
-                  <p className="text-sm text-muted-foreground font-semibold">{asset.operatingSystem}</p>
+                  <p className="text-sm text-muted-foreground font-semibold">
+                    {getFieldValue("operatingSystem", "operating_system")}
+                  </p>
                 </div>
               </div>
-              {asset.description && (
+              {(asset.description || asset.description) && (
                 <div className="mt-8 pt-6 border-t border-border/50">
                   <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                     <div className="w-1 h-4 bg-blue-400 rounded-full"></div>
                     Description
                   </p>
                   <p className="text-sm text-muted-foreground leading-relaxed bg-muted/50 p-4 rounded-xl border border-border/50">
-                    {asset.description}
+                    {asset.description || "No description provided"}
                   </p>
                 </div>
               )}
@@ -235,14 +228,18 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
                   <div className="w-1 h-4 bg-green-400 rounded-full"></div>
                   Asset Location
                 </p>
-                <p className="text-sm text-muted-foreground font-semibold leading-relaxed">{asset.assetLocation}</p>
+                <p className="text-sm text-muted-foreground font-semibold leading-relaxed">
+                  {getFieldValue("assetLocation", "asset_location")}
+                </p>
               </div>
               <div className="space-y-2">
                 <p className="text-xs font-bold text-green-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                   <div className="w-1 h-4 bg-green-400 rounded-full"></div>
                   Google Location
                 </p>
-                <p className="text-sm text-muted-foreground leading-relaxed">{asset.googleLocation}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {getFieldValue("googleLocation", "google_location")}
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -251,7 +248,7 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
                     Latitude
                   </p>
                   <p className="text-sm font-mono bg-muted/70 px-4 py-3 rounded-xl text-muted-foreground border border-border/50">
-                    {asset.latitude}
+                    {asset.latitude || "Not specified"}
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -260,7 +257,7 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
                     Longitude
                   </p>
                   <p className="text-sm font-mono bg-muted/70 px-4 py-3 rounded-xl text-muted-foreground border border-border/50">
-                    {asset.longitude}
+                    {asset.longitude || "Not specified"}
                   </p>
                 </div>
               </div>
@@ -286,7 +283,7 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
                   MAC Address
                 </p>
                 <p className="text-sm font-mono bg-muted/70 px-4 py-3 rounded-xl text-muted-foreground border border-border/50">
-                  {asset.macAddress}
+                  {getFieldValue("macAddress", "mac_address")}
                 </p>
               </div>
               <div className="space-y-2">
@@ -294,21 +291,27 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
                   <div className="w-1 h-4 bg-orange-400 rounded-full"></div>
                   Content Management System
                 </p>
-                <p className="text-sm text-muted-foreground font-semibold">{asset.contentManagementSystem}</p>
+                <p className="text-sm text-muted-foreground font-semibold">
+                  {getFieldValue("contentManagementSystem", "content_management_system")}
+                </p>
               </div>
               <div className="space-y-2">
                 <p className="text-xs font-bold text-orange-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                   <div className="w-1 h-4 bg-orange-400 rounded-full"></div>
                   Display Orientation
                 </p>
-                <p className="text-sm text-muted-foreground font-semibold">{asset.displayOrientation}</p>
+                <p className="text-sm text-muted-foreground font-semibold">
+                  {getFieldValue("displayOrientation", "display_orientation")}
+                </p>
               </div>
               <div className="space-y-2">
                 <p className="text-xs font-bold text-orange-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                   <div className="w-1 h-4 bg-orange-400 rounded-full"></div>
                   Operating Hours
                 </p>
-                <p className="text-sm text-muted-foreground font-semibold">{asset.operatingHours}</p>
+                <p className="text-sm text-muted-foreground font-semibold">
+                  {getFieldValue("operatingHours", "operating_hours")}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -332,28 +335,36 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
                     <div className="w-1 h-4 bg-purple-400 rounded-full"></div>
                     Purchase Date
                   </p>
-                  <p className="text-sm text-muted-foreground font-semibold">{formatDate(asset.purchaseDate)}</p>
+                  <p className="text-sm text-muted-foreground font-semibold">
+                    {formatDate(asset.purchaseDate || asset.purchase_date)}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <p className="text-xs font-bold text-purple-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                     <div className="w-1 h-4 bg-purple-400 rounded-full"></div>
                     Installation Date
                   </p>
-                  <p className="text-sm text-muted-foreground font-semibold">{formatDate(asset.installationDate)}</p>
+                  <p className="text-sm text-muted-foreground font-semibold">
+                    {formatDate(asset.installationDate || asset.installation_date)}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <p className="text-xs font-bold text-purple-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                     <div className="w-1 h-4 bg-purple-400 rounded-full"></div>
                     Warranty Start
                   </p>
-                  <p className="text-sm text-muted-foreground font-semibold">{formatDate(asset.warrantyStartDate)}</p>
+                  <p className="text-sm text-muted-foreground font-semibold">
+                    {formatDate(asset.warrantyStartDate || asset.warranty_start_date)}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <p className="text-xs font-bold text-purple-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                     <div className="w-1 h-4 bg-purple-400 rounded-full"></div>
                     Warranty Period
                   </p>
-                  <p className="text-sm text-muted-foreground font-semibold">{asset.warrantyPeriodMonths} months</p>
+                  <p className="text-sm text-muted-foreground font-semibold">
+                    {asset.warrantyPeriodMonths || asset.warranty_period_months || 0} months
+                  </p>
                 </div>
               </div>
               <div className="mt-6 pt-4 border-t border-border/50">

@@ -130,6 +130,7 @@ export function AssetProvider({ children }: { children: ReactNode }) {
 
     try {
       setLoading(true)
+      console.log("[v0] Starting loadData function...")
 
       const { data: categoriesData, error: categoriesError } = await supabase
         .from("asset_categories")
@@ -137,8 +138,9 @@ export function AssetProvider({ children }: { children: ReactNode }) {
         .order("name")
 
       if (categoriesError) {
-        console.error("Error loading categories:", categoriesError)
+        console.error("[v0] Error loading categories:", categoriesError)
       } else {
+        console.log("[v0] Categories loaded:", categoriesData?.length || 0, "categories")
         setCategories(categoriesData || [])
       }
 
@@ -148,12 +150,23 @@ export function AssetProvider({ children }: { children: ReactNode }) {
         .order("created_at", { ascending: false })
 
       if (assetsError) {
-        console.error("Error loading assets:", assetsError)
+        console.error("[v0] Error loading assets:", assetsError)
       } else {
+        console.log("[v0] Assets loaded:", assetsData?.length || 0, "assets")
+        console.log("[v0] Asset data sample:", assetsData?.[0])
+        assetsData?.forEach((asset, index) => {
+          console.log(`[v0] Asset ${index + 1}:`, {
+            id: asset.id,
+            name: asset.name,
+            latitude: asset.latitude,
+            longitude: asset.longitude,
+            hasCoordinates: !!(asset.latitude && asset.longitude),
+          })
+        })
         setAssets(assetsData || [])
       }
     } catch (error) {
-      console.error("Error loading data:", error)
+      console.error("[v0] Error loading data:", error)
     } finally {
       setLoading(false)
       loadingDataRef.current = false

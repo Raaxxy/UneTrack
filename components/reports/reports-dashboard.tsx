@@ -84,6 +84,36 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null
 }
 
+const isValidDate = (dateString: string | null | undefined): boolean => {
+  if (!dateString || typeof dateString !== "string") return false
+  try {
+    const date = parseISO(dateString)
+    return !isNaN(date.getTime())
+  } catch {
+    return false
+  }
+}
+
+const safeParseDate = (dateString: string | null | undefined): Date | null => {
+  if (!isValidDate(dateString)) return null
+  try {
+    return parseISO(dateString!)
+  } catch {
+    return null
+  }
+}
+
+const safeFormat = (date: Date | null | undefined, formatString: string): string => {
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    return "Invalid Date"
+  }
+  try {
+    return format(date, formatString)
+  } catch {
+    return "Invalid Date"
+  }
+}
+
 export default function ReportsDashboard() {
   const { assets, masterAssets, categories, locations, sections, subSections, zones } = useAssetContext()
   const [filters, setFilters] = useState<ReportFilters>({
@@ -209,16 +239,18 @@ export default function ReportsDashboard() {
       })
       .filter((item) => item.value > 0)
 
-    // Enhanced maintenance trends with cost simulation
     const maintenanceTrends = Array.from({ length: 12 }, (_, i) => {
       const date = subMonths(new Date(), 11 - i)
       const monthStart = startOfMonth(date)
       const monthEnd = endOfMonth(date)
-      const monthName = format(date, "MMM yyyy")
+      const monthName = safeFormat(date, "MMM yyyy")
 
       const maintenanceCount = filteredAssets.filter((asset) => {
-        if (!asset.lastMaintenanceDate) return false
-        const maintenanceDate = parseISO(asset.lastMaintenanceDate)
+        if (!isValidDate(asset.lastMaintenanceDate)) return false
+
+        const maintenanceDate = safeParseDate(asset.lastMaintenanceDate)
+        if (!maintenanceDate) return false
+
         return isWithinInterval(maintenanceDate, { start: monthStart, end: monthEnd })
       }).length
 
@@ -253,7 +285,6 @@ export default function ReportsDashboard() {
 
     // ... existing code for other analyses ...
 
-    // Asset age analysis
     const currentDate = new Date()
     const ageDistribution = [
       { range: "0-1 years", count: 0, color: ENHANCED_COLORS[2] },
@@ -263,7 +294,11 @@ export default function ReportsDashboard() {
     ]
 
     filteredAssets.forEach((asset) => {
-      const purchaseDate = parseISO(asset.purchaseDate)
+      if (!isValidDate(asset.purchaseDate)) return
+
+      const purchaseDate = safeParseDate(asset.purchaseDate)
+      if (!purchaseDate) return
+
       const ageInYears = (currentDate.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24 * 365)
 
       if (ageInYears <= 1) ageDistribution[0].count++
@@ -272,34 +307,45 @@ export default function ReportsDashboard() {
       else ageDistribution[3].count++
     })
 
-    // Warranty status analysis
     const warrantyAnalysis = {
-      active: filteredAssets.filter((asset) => new Date(asset.warrantyEndDate) > currentDate).length,
+      active: filteredAssets.filter((asset) => {
+        if (!isValidDate(asset.warrantyEndDate)) return false
+        const endDate = safeParseDate(asset.warrantyEndDate)
+        return endDate ? endDate > currentDate : false
+      }).length,
       expiringSoon: filteredAssets.filter((asset) => {
-        const endDate = new Date(asset.warrantyEndDate)
+        if (!isValidDate(asset.warrantyEndDate)) return false
+        const endDate = safeParseDate(asset.warrantyEndDate)
+        if (!endDate) return false
         const threeMonthsFromNow = new Date()
         threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3)
         return endDate > currentDate && endDate <= threeMonthsFromNow
       }).length,
-      expired: filteredAssets.filter((asset) => new Date(asset.warrantyEndDate) <= currentDate).length,
+      expired: filteredAssets.filter((asset) => {
+        if (!isValidDate(asset.warrantyEndDate)) return false
+        const endDate = safeParseDate(asset.warrantyEndDate)
+        return endDate ? endDate <= currentDate : false
+      }).length,
     }
 
-    // Maintenance status analysis
     const maintenanceAnalysis = {
       overdue: filteredAssets.filter((asset) => {
-        if (!asset.nextMaintenanceDate) return false
-        return new Date(asset.nextMaintenanceDate) < currentDate
+        if (!isValidDate(asset.nextMaintenanceDate)) return false
+        const dueDate = safeParseDate(asset.nextMaintenanceDate)
+        return dueDate ? dueDate < currentDate : false
       }).length,
       dueSoon: filteredAssets.filter((asset) => {
-        if (!asset.nextMaintenanceDate) return false
-        const dueDate = new Date(asset.nextMaintenanceDate)
+        if (!isValidDate(asset.nextMaintenanceDate)) return false
+        const dueDate = safeParseDate(asset.nextMaintenanceDate)
+        if (!dueDate) return false
         const oneMonthFromNow = new Date()
         oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1)
         return dueDate >= currentDate && dueDate <= oneMonthFromNow
       }).length,
       upToDate: filteredAssets.filter((asset) => {
-        if (!asset.nextMaintenanceDate) return true
-        const dueDate = new Date(asset.nextMaintenanceDate)
+        if (!isValidDate(asset.nextMaintenanceDate)) return true
+        const dueDate = safeParseDate(asset.nextMaintenanceDate)
+        if (!dueDate) return true
         const oneMonthFromNow = new Date()
         oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1)
         return dueDate > oneMonthFromNow
@@ -342,12 +388,13 @@ export default function ReportsDashboard() {
   }, [assets, masterAssets, categories, locations, filters])
 
   const handleExportReport = async (format: "pdf" | "excel" | "csv") => {
-    const reportName = `Digital_Signage_Report_${format.toUpperCase()}_${format(new Date(), "yyyy-MM-dd")}`
+    const currentDate = new Date()
+    const reportName = `Digital_Signage_Report_${format.toUpperCase()}_${safeFormat(currentDate, "yyyy-MM-dd")}`
 
     if (format === "csv") {
       const csvData = [
         ["Digital Signage Asset Report"],
-        ["Generated On", format(new Date(), "yyyy-MM-dd HH:mm:ss")],
+        ["Generated On", safeFormat(currentDate, "yyyy-MM-dd HH:mm:ss")],
         [""],
         ["Summary Metrics"],
         ["Total Assets", reportData.totalAssets.toString()],
