@@ -13,9 +13,8 @@ const dmSans = DM_Sans({
 })
 
 export const metadata: Metadata = {
-  title: "AssetFlow - Asset Management SaaS",
+  title: "UneTrack",
   description: "Comprehensive Asset Management Platform for Enterprise",
-    generator: 'v0.app'
 }
 
 export default function RootLayout({

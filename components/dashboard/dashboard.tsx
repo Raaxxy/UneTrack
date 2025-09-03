@@ -222,7 +222,6 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                <p className="text-muted-foreground">Digital Signage Asset Management Overview</p>
               </div>
             </div>
 
@@ -281,7 +280,7 @@ export default function Dashboard() {
                   <MapPin className="h-5 w-5" />
                   Asset Locations Map
                 </CardTitle>
-                <CardDescription>Geographic distribution of your digital signage assets across India</CardDescription>
+                <CardDescription>Geographic distribution of your assets across India</CardDescription>
               </CardHeader>
               <CardContent className="p-6">
                 <div className="h-[600px] w-full">

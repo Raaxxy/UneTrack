@@ -58,7 +58,7 @@ export default function LoginPage() {
           <Card className="border-border/50 shadow-lg">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-semibold">Welcome back</CardTitle>
-              <CardDescription>Sign in to your account to manage your digital signage assets</CardDescription>
+              <CardDescription>Sign in to your account to get started</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleLogin} className="space-y-4">
